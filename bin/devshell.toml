@@ -1,0 +1,94 @@
+[[commands]]
+name = "setup"
+category = "installation"
+command = '''
+     git submodule update --init
+     $PRJ_ROOT/bin/build
+     $PRJ_ROOT/bin/ensure-lang rust
+     $PRJ_ROOT/bin/test
+     '''
+
+[[commands]]
+name = "cask-build"
+category = "installtion"
+command = '''
+     cask install && cask build
+     cask --path langs install && cask --path langs build
+'''
+help = "run build shell of emacs-tree-sitter"
+
+
+[[commands]]
+name = "ets-build"
+category = "installtion"
+command = "$PRJ_ROOT/bin/build"
+help = "run build shell of emacs-tree-sitter"
+
+[[commands]]
+name = "ets-test"
+category = "tests"
+command = "$PRJ_ROOT/bin/test"
+help = "run build shell of emacs-tree-sitter"
+
+[[commands]]
+name = "ets-compile"
+category = "lang"
+command = '''
+        cd $PRJ_ROOT/langs
+        script/compile $@
+        '''
+help = "etc compile <julia>"
+
+[[commands]]
+name = "lang-test"
+category = "tests"
+command = '''
+         cd $PRJ_ROOT/langs/repos/$@
+         bash script/parse-examples
+'''
+help = "test lang parsing | lang-test <rust>"
+
+[[commands]]
+name = "lang-add"
+category = "lang"
+command = '''
+    cd $PRJ_ROOT/langs
+    target=${1:-release}
+    case $target in
+        (nix)
+            git submodule add -b master -- https://github.com/cstrahan/tree-sitter-nix.git repos/$target || true
+            ;;
+        (nickel)
+            git submodule add -b main -- https://github.com/milahu/tree-sitter-nickel.git repos/$target || true
+            ;;
+        (elisp)
+            git submodule add -b main -- https://github.com/Wilfred/tree-sitter-elisp repos/$target || true
+            ;;
+        (*)
+            echo "no submodule in repos for your lang"
+            exit 1
+    esac
+cd repos/$target
+ets-compile $target
+#fixup commands
+case $target in
+        (elisp)
+        cd src
+        gcc ./parser.c -fPIC -I./ --shared -o $PRJ_ROOT/langs/bin/elisp.so
+        ;;
+esac
+'''
+help = "add extra langs support | lang-add <nix>"
+
+[[commands]]
+name = "lang-update"
+category = "lang"
+command = '''
+# git submodule update --checkout --remote repos/julia
+branch=$(cat $(git rev-parse --git-dir)/modules/langs/modules/repos/$@/refs/remotes/origin/HEAD  | cut -d'/' -f4)
+cd $PRJ_ROOT/langs/repos/$@
+git reset --hard
+git fetch origin $branch && git pull origin $branch
+ets-compile $@
+'''
+help = "update lang repo | lang-update <rust>"
